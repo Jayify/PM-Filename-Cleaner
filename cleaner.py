@@ -34,6 +34,7 @@ def clean_filename(name: str) -> str:
 
 def rename_and_compress(folder_path: str, compress: bool):
     image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
+    count = 0
 
     for filename in os.listdir(folder_path):
         old_path = os.path.join(folder_path, filename)
@@ -58,17 +59,23 @@ def rename_and_compress(folder_path: str, compress: bool):
             try:
                 source = tinify.from_file(new_path)
                 source.to_file(new_path)
-                print(f"Renamed + Compressed: {filename} -> {new_name}")
+                print(f"- Renamed + Compressed: {filename} -> {new_name}")
+                count += 1
             except tinify.Error as e:
                 print(f"Tinify error for {new_name}: {e}")
         else:
-            print(f"Renamed: {filename} -> {new_name}")
+            print(f"- Renamed: {filename} -> {new_name}")
+            count += 1
+    print(f"\nTotal files processed: {count}")
 
 
 if __name__ == "__main__":
+    print("Filename Cleaner\n")
+
     folder = input("Enter the folder path: ").strip('"')
 
     choice = input("Compress images with TinyPNG? This will take a lot longer. (y/n): ").strip().lower()
     compress = choice.startswith("y")
+    print()
 
     rename_and_compress(folder, compress)
