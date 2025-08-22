@@ -1,22 +1,29 @@
 import os
 import re
+import tinify
+from dotenv import load_dotenv
+
+# Load secrets
+load_dotenv()
+tinify.key = os.getenv("TINIFY_API_KEY")
+
 
 def clean_filename(name: str) -> str:
-    # Remove leading "Fig - <number>" if present
+    # Remove leading "Fig 3", "Fig. 3", "Figure 3", etc.
     name = re.sub(r"^(fig(?:ure)?\.?\s*[-–—]?\s*\d+\s*)", "", name, flags=re.IGNORECASE)
 
-    # Remove '-min' or similar endings
-    name = re.sub(r"-min$", "", name, flags=re.IGNORECASE)
+    # Remove '-min', '–min', '—min' at the end
+    name = re.sub(r"[-–—]min$", "", name, flags=re.IGNORECASE)
 
     # Lowercase
     name = name.lower()
 
-    # Replace commas, hyphens, and brackets
+    # Replace commas and brackets
     name = name.replace(",", "")
     name = name.replace("(", " ")
     name = name.replace(")", " ")
 
-    # Replace spaces and dashes with underscores
+    # Replace spaces and any dashes with underscores
     name = re.sub(r"[ \t\-–—]+", "_", name)
 
     # Remove leading/trailing underscores
@@ -25,10 +32,9 @@ def clean_filename(name: str) -> str:
     return name
 
 
-def rename_images(folder_path: str):
+def rename_and_compress(folder_path: str, compress: bool):
     image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
 
-    # Iterate over files in the folder, skip non-image files
     for filename in os.listdir(folder_path):
         old_path = os.path.join(folder_path, filename)
         if not os.path.isfile(old_path):
@@ -47,9 +53,22 @@ def rename_images(folder_path: str):
             continue
 
         os.rename(old_path, new_path)
-        print(f"Renamed: {filename} -> {new_name}")
+
+        if compress:
+            try:
+                source = tinify.from_file(new_path)
+                source.to_file(new_path)
+                print(f"Renamed + Compressed: {filename} -> {new_name}")
+            except tinify.Error as e:
+                print(f"Tinify error for {new_name}: {e}")
+        else:
+            print(f"Renamed: {filename} -> {new_name}")
 
 
 if __name__ == "__main__":
     folder = input("Enter the folder path: ").strip('"')
-    rename_images(folder)
+
+    choice = input("Compress images with TinyPNG? This will take a lot longer. (y/n): ").strip().lower()
+    compress = choice.startswith("y")
+
+    rename_and_compress(folder, compress)
